@@ -3,3 +3,7 @@ Make sure you have multiple servers running in the background.You can use any ki
 
 ### Troubleshooting ROR
 If you get this error message (`A server is already running. Check /tmp/pids/server.pid.`) while running the ROR server, just add a `-P` argument to specify a different PID. `rails s -p 8002 -P 42222`
+
+
+# cURLing
+`curl http://localhost:{portnumber}`
