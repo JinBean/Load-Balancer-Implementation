@@ -7,11 +7,11 @@ import time
 import threading
 import requests
 import random
+import config
 
 multiprocessing.set_start_method('spawn', True)
 
 def worker(socket, worker_num):
-  active_servers = [8001, 8002, 8003]
   while True:
       client, address = socket.accept()
       print("{u} connected to {w}".format(u=address, w=worker_num))
@@ -20,7 +20,7 @@ def worker(socket, worker_num):
       curl_request = buffer_string.split("\r")[0]
       print("Curl Request: ", curl_request)
       
-      port = random.choice(active_servers)
+      port = random.choice(config.ACTIVE_SERVERS)
       response = requests.get('http://localhost:{}'.format(port))
 
       client.send(response.text.encode('utf-8'))
@@ -29,12 +29,11 @@ def worker(socket, worker_num):
       client.close()
 
 if __name__ == '__main__':
-  num_workers = 4
   serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
   serversocket.bind(('',9086))
   serversocket.listen(5)
-  workers = [multiprocessing.Process(target=worker, args=(serversocket, i,)) for i in range(num_workers)]
+  workers = [multiprocessing.Process(target=worker, args=(serversocket, i,)) for i in range(config.WORKER_NUM)]
 
   for p in workers:
     p.daemon = True
