@@ -8,11 +8,13 @@ import threading
 import requests
 import random
 import config
+import copy
+import queue
 
 multiprocessing.set_start_method('spawn', True) # Necessary for multiprocessing library to work on linux
 
 # All the actual work happens in the worker function
-def worker(socket, worker_num):
+def worker(socket, worker_num, queue):
   while True:
       client, address = socket.accept()
       print("{u} connected to {w}".format(u=address, w=worker_num))
@@ -21,7 +23,8 @@ def worker(socket, worker_num):
       curl_request = buffer_string.split("\r")[0]
       print("Curl Request: ", curl_request)
       
-      port = random.choice(config.ACTIVE_SERVERS) # Selects a random server from the config file. Can be changed to round robin, weighted, etc
+      # port = random.choice(config.ACTIVE_SERVERS) # Selects a random server from the config file. Can be changed to round robin, weighted, etc
+      port = roundRobin(queue)
 
       # Queries the respective server, currently only handles GET requests, but can be further configured to handle more if necessary
       response = requests.get('http://localhost:{}'.format(port))
@@ -31,15 +34,24 @@ def worker(socket, worker_num):
       time.sleep(1)
       client.close()
 
+def roundRobin(queue):
+  count = queue.get()
+  selected_port = config.ACTIVE_SERVERS[count]
+  count = (count + 1)%len(config.ACTIVE_SERVERS)
+  queue.put(count)
+  print(count)
+  return selected_port
+
 if __name__ == '__main__':
   # Basic socket setup
   serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # Disables TIME_WAIT state of connected sockets
-  serversocket.bind(('',9085)) # Change port to main server port
+  serversocket.bind(('',9093)) # Change port to main server port
   serversocket.listen(5)
-
+  q = multiprocessing.Queue()
+  q.put(0)
   # Start multiple worker processes in parallel
-  workers = [multiprocessing.Process(target=worker, args=(serversocket, i,)) for i in range(config.WORKER_NUM)]
+  workers = [multiprocessing.Process(target=worker, args=(serversocket, i, q)) for i in range(config.WORKER_NUM)]
 
   for p in workers:
     p.daemon = True # This kills all subprocesses when the script ends
