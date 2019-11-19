@@ -42,6 +42,20 @@ def roundRobin(queue):
   print(count)
   return selected_port
 
+def leastLatency():
+  selected_port = 0
+  min_timing = sys.maxsize
+  for port in config.ACTIVE_SERVERS:
+    os.system("nmap -p " + str(port) + " localhost > response.txt")
+    with open("response.txt") as response_file:
+      response = response_file.read()
+    timing = float(response.split("Host is up (")[1].split("s latency")[0])
+    print(port, timing)
+    if timing < min_timing:
+      selected_port = port
+      min_timing = timing
+  return selected_port
+
 if __name__ == '__main__':
   # Basic socket setup
   serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
